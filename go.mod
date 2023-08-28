@@ -1,4 +1,4 @@
-module github.com/ayo-ajayi/creditdb
+module github.com/creditdb/go-creditdb
 
 go 1.20
 
