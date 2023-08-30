@@ -20,7 +20,7 @@ type CreditDB struct {
 
 type config struct {
 	host        string
-	currentPage int
+	currentPage uint
 }
 
 type Line struct {
@@ -86,7 +86,7 @@ func (c *CreditDB) WithHost(host string) *CreditDB {
 	return c
 }
 
-func (c *CreditDB) WithPage(page int) *CreditDB {
+func (c *CreditDB) WithPage(page uint) *CreditDB {
 	c.config.currentPage = page
 	return c
 }
@@ -96,7 +96,7 @@ func (c *CreditDB) SetLine(ctx context.Context, key, value string) error {
 	line := struct {
 		Key   string `json:"key"`
 		Value string `json:"value"`
-		Page  int    `json:"page"`
+		Page  uint    `json:"page"`
 	}{
 		Key:   key,
 		Value: value,
@@ -128,7 +128,7 @@ func (c *CreditDB) GetLine(ctx context.Context, key string) (*Line, error) {
 	getURL := fmt.Sprintf("%s/get", c.config.host)
 	getData := struct {
 		Key  string `json:"key"`
-		Page int    `json:"page"`
+		Page uint    `json:"page"`
 	}{
 		Key:  string(key),
 		Page: c.config.currentPage,
@@ -151,9 +151,11 @@ func (c *CreditDB) GetLine(ctx context.Context, key string) (*Line, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("key not found")
+	}
 
 	if resp.StatusCode != http.StatusOK {
-
 		return nil, fmt.Errorf("get request failed with status code: %d", resp.StatusCode)
 	}
 	var data Line
@@ -161,13 +163,14 @@ func (c *CreditDB) GetLine(ctx context.Context, key string) (*Line, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &data, nil
 }
 
 func (c *CreditDB) GetAllLines(ctx context.Context) ([]Line, error) {
 	getAllURL := fmt.Sprintf("%s/getall", c.config.host)
 	getAllData := struct {
-		Page int `json:"page"`
+		Page uint `json:"page"`
 	}{
 		Page: c.config.currentPage,
 	}
@@ -198,10 +201,43 @@ func (c *CreditDB) GetAllLines(ctx context.Context) ([]Line, error) {
 	return response.Result, nil
 }
 
+func(c *CreditDB)DeleteLine(ctx context.Context, key string)error{
+	delURL := fmt.Sprintf("%s/delete", c.config.host)
+	delData := struct {
+		Page uint `json:"page"`
+		Key  string `json:"key"`
+	}{
+		Page: c.config.currentPage,
+		Key:  key,
+	}
+	delJSON, err := json.Marshal(delData)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, "DELETE", delURL, bytes.NewBuffer(delJSON))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("key not found")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("del request failed with status code: %d", resp.StatusCode)
+	}
+	return nil
+}
+
 func (c *CreditDB) Flush(ctx context.Context) error {
 	flushURL := fmt.Sprintf("%s/flush", c.config.host)
 	flushData := struct {
-		Page int `json:"page"`
+		Page uint `json:"page"`
 	}{
 		Page: c.config.currentPage,
 	}
@@ -210,10 +246,12 @@ func (c *CreditDB) Flush(ctx context.Context) error {
 		log.Println("here", err)
 		return err
 	}
+
 	req, err := http.NewRequestWithContext(ctx, "DELETE", flushURL, bytes.NewBuffer(flushJSON))
 	if err != nil {
 		return err
 	}
+	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return err
@@ -265,4 +303,8 @@ func (c *CreditDB) Health(ctx context.Context) error {
 		return fmt.Errorf("health check failed with status code: %d", resp.StatusCode)
 	}
 	return nil
+}
+
+func(c *CreditDB)GetCurrentPage() uint {
+	return c.config.currentPage
 }
