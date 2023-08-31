@@ -30,7 +30,7 @@ type Line struct {
 
 type Page struct {
 	Status string `json:"status"`
-	Page   int    `json:"pagenumber"`
+	Page   uint    `json:"pagenumber"`
 	Result []Line `json:"result"`
 }
 
