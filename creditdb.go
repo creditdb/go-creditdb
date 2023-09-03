@@ -317,3 +317,15 @@ func (c *CreditDB) Health(ctx context.Context) error {
 func (c *CreditDB) GetCurrentPage() uint {
 	return c.config.currentPage
 }
+
+
+func (c *CreditDB)Exists(ctx context.Context, key string)(bool, error){
+	_, err := c.GetLine(ctx, key)
+	if err != nil {
+		if err == ErrNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
