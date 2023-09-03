@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	ErrNotFound           = NewError("resource not found", CategoryNotFound)
+	ErrNotFound           = NewError("key not found", CategoryNotFound)
 	ErrBadRequest         = NewError("bad request", CategoryBadRequest)
 	ErrInternalError      = NewError("internal server error", CategoryInternalError)
 	ErrTimeout            = NewError("timeout", CategoryTimeout)
